@@ -12,8 +12,9 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
 # Import our modules
-from src.api.routes import router, initialize_predictor
+from src.api.routes import router
 from src.config.settings import API_HOST, API_PORT, DEBUG
+from src.database.mongodb import mongo_manager
 
 # Configure logging
 logging.basicConfig(
@@ -24,8 +25,8 @@ logger = logging.getLogger(__name__)
 
 # Create FastAPI app
 app = FastAPI(
-    title="Pneumonia Prediction Service",
-    description="AI-powered pneumonia detection from chest X-ray images",
+    title="Prediagnostic Case Service",
+    description="Service to retrieve prediagnostic cases for doctor review",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
@@ -41,16 +42,17 @@ app.add_middleware(
 )
 
 # Include API routes
-app.include_router(router, prefix="/api/v1")
+app.include_router(router, prefix="/prediagnostic")
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize services on startup."""
     try:
-        logger.info("Starting Pneumonia Prediction Service...")
+        logger.info("Starting Prediagnostic Service...")
         
-        # Initialize the predictor
-        initialize_predictor()
+        # Initialize MongoDB connection
+        await mongo_manager.connect()
+        logger.info("MongoDB connected successfully")
         
         logger.info("Service started successfully")
         
@@ -61,17 +63,21 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup on shutdown."""
-    logger.info("Shutting down Pneumonia Prediction Service...")
+    logger.info("Shutting down Prediagnostic Service...")
+    
+    # Disconnect from MongoDB
+    await mongo_manager.disconnect()
+    logger.info("MongoDB disconnected")
 
 @app.get("/")
 async def root():
     """Root endpoint."""
     return {
-        "message": "Pneumonia Prediction Service",
+        "message": "Prediagnostic Case Service",
         "version": "1.0.0",
         "status": "running",
         "docs": "/docs",
-        "api": "/api/v1"
+        "api": "/prediagnostic"
     }
 
 if __name__ == "__main__":

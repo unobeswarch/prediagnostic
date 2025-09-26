@@ -25,11 +25,16 @@ JPEG_QUALITY = 95
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # Disable GPU by default
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 
-# MongoDB Configuration (for future integration)
+# MongoDB Configuration
 MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
 DATABASE_NAME = os.getenv("DATABASE_NAME", "prediagnostic_db")
-COLLECTION_NAME = os.getenv("COLLECTION_NAME", "predictions")
 
+# Collection names matching real schema
+PREDIAGNOSTICOS_COLLECTION = os.getenv("PREDIAGNOSTICOS_COLLECTION", "prediagnosticos")
+DIAGNOSTICOS_COLLECTION = os.getenv("DIAGNOSTICOS_COLLECTION", "diagnosticos")
+
+MONGODB_CONNECTION_TIMEOUT: int = int(os.getenv("MONGODB_CONNECTION_TIMEOUT", "10000"))
+MONGODB_SERVER_SELECTION_TIMEOUT: int = int(os.getenv("MONGODB_SERVER_SELECTION_TIMEOUT", "5000"))
 # Business Logic Service Configuration (for future integration)
 BUSINESS_LOGIC_SERVICE_URL = os.getenv("BUSINESS_LOGIC_SERVICE_URL", "http://localhost:8001")
 
