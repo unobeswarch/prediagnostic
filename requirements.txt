@@ -1,28 +1,26 @@
+# Core web framework
 fastapi==0.115.6
 uvicorn==0.34.0
 python-multipart==0.0.20
-tensorflow==2.18.0
-keras==3.7.0
-pillow==11.0.0
-opencv-python==4.10.0.84
-numpy==2.0.2
-pydantic==2.10.4
+pydantic>=2.10.0
 
-# Testing dependencies
-pytest==7.4.0
-pytest-asyncio==0.21.0
-httpx==0.24.0
+# AI/ML dependencies (for future team integration)
+# Using flexible versions to avoid conflicts
+tensorflow>=2.20.0
+keras>=3.7.0
+pillow>=11.0.0
+opencv-python>=4.10.0
+numpy>=2.0.0,<3.0.0
 
-# Optional: MongoDB integration (for future use)
-pymongo==4.3.3
-motor==3.1.2
-
-# Optional: Logging and monitoring
-structlog==23.1.0
-
-# Optional: Environment variable management
-python-dotenv==1.0.0
-
+# MongoDB integration (required for your HU)
 pymongo>=4.6.0
 motor>=3.3.0
-pydantic>=2.0.0
+
+# Testing dependencies
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+httpx>=0.24.0
+
+# Utilities
+python-dotenv>=1.0.0
+structlog>=23.1.0
