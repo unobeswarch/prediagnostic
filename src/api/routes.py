@@ -7,6 +7,7 @@ import logging
 from typing import Dict, Any
 
 from ..services.prediagnostic_service import prediagnostic_service
+from ..services.prediagnostic_cases_service import prediagnostic_cases_service
 
 logger = logging.getLogger(__name__)
 
@@ -111,3 +112,20 @@ async def service_info():
         },
         "integration": "Designed for BusinessLogic orchestration"
     }
+
+
+@router.get("/cases/{user_id}", response_model=Dict[str, Any])
+async def get_cases_by_user(user_id: str):
+    """
+    Get all prediagnostic cases for a given user_id.
+    Returns an array of cases with selected fields.
+    """
+    try:
+        cases = await prediagnostic_cases_service.get_cases_by_user(user_id)
+        return JSONResponse(content={"cases": cases}, status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger.error(f"Error retrieving cases for user_id {user_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error while retrieving cases"
+        )
