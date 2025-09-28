@@ -2,7 +2,7 @@
 Prediction service with MongoDB operations for HU: Get case by prediagnostico_id.
 """
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from datetime import datetime
 from pathlib import Path
 from PIL import Image
@@ -127,6 +127,53 @@ class PrediagnosticService:
             logger.error(f"Error updating prediagnostico {prediagnostico_id} status to {new_status}: {e}")
             raise
 
+
+    async def get_processed_cases(self) -> List[Dict[str, Any]]:
+        """
+        Get all prediagnostic cases with 'procesado' status for doctor review.
+        
+        This implements the HU3 requirement:
+        "Como usuario (doctor) quiero ver una lista de casos pendientes de pacientes para ser revisados"
+        
+        Filters cases by estado="procesado" and formats the response to include only
+        relevant fields: id, paciente, fecha, estado.
+        
+        Returns:
+            List[Dict]: List of processed cases with formatted fields
+            
+        Raises:
+            Exception: If database query fails
+        """
+        try:
+            # Query MongoDB for cases with estado="procesado"
+            cursor = mongo_manager.prediagnosticos_collection.find(
+                {"estado": "procesado"},
+                {
+                    "prediagnostico_id": 1,
+                    "user_id": 1, 
+                    "fecha_procesamiento": 1,
+                    "estado": 1,
+                    "_id": 0  # Exclude MongoDB's _id field
+                }
+            )
+            
+            processed_cases = []
+            async for case in cursor:
+                # Format the response according to requirement (id, paciente, fecha, estado)
+                formatted_case = {
+                    "id": case["prediagnostico_id"],  # Map prediagnostico_id to id
+                    "paciente": case["user_id"],       # Map user_id to paciente  
+                    "fecha": case["fecha_procesamiento"].isoformat() if case.get("fecha_procesamiento") else None,
+                    "estado": case["estado"]
+                }
+                processed_cases.append(formatted_case)
+            
+            logger.info(f"Retrieved {len(processed_cases)} processed cases for doctor review")
+            return processed_cases
+            
+        except Exception as e:
+            logger.error(f"Error retrieving processed cases: {e}")
+            raise
 
     async def verify_connection(self) -> Dict[str, Any]:
         """

@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, status, File, UploadFile, Form, Bo
 from fastapi.responses import JSONResponse
 import shutil
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, List
 from datetime import datetime
 from pathlib import Path
 import uuid
@@ -165,6 +165,52 @@ async def get_case(prediagnostico_id: str):
             detail="Internal server error while retrieving case"
         )
 
+@router.get("/cases", response_model=List[Dict[str, Any]])
+async def get_processed_cases():
+    """
+    Get all prediagnostic cases with 'procesado' status for doctor review (HU3).
+    
+    This endpoint implements the requirement:
+    "Como usuario (doctor) quiero ver una lista de casos pendientes de pacientes para ser revisados"
+    
+    Filters the MongoDB prediagnosticos collection for cases with estado="procesado"
+    and returns formatted results with only relevant fields: id, paciente, fecha, estado.
+    
+    Returns:
+        List[Dict]: List of processed cases ready for doctor review
+        [
+            {
+                "id": "prediagnostico_id",
+                "paciente": "user_id", 
+                "fecha": "2023-XX-XXTXX:XX:XX.XXXXXX",
+                "estado": "procesado"
+            },
+            ...
+        ]
+        
+    Raises:
+        HTTPException 500: If database query fails
+    """
+    try:
+        logger.info("Retrieving all processed cases for doctor review (HU3)")
+        
+        # Get processed cases from the service
+        processed_cases = await prediagnostic_service.get_processed_cases()
+        
+        logger.info(f"Successfully retrieved {len(processed_cases)} processed cases")
+        
+        return JSONResponse(
+            content=processed_cases,
+            status_code=status.HTTP_200_OK
+        )
+        
+    except Exception as e:
+        logger.error(f"Error retrieving processed cases: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error while retrieving processed cases"
+        )
+
 @router.get("/health", response_model=Dict[str, Any])
 async def health_check():
     """
@@ -209,6 +255,7 @@ async def service_info():
         "description": "Service to retrieve prediagnostic cases for doctor review",
         "hu_implementation": "Doctor case selection by prediagnostico_id",
         "endpoints": {
+            "/cases": "GET - Get all processed cases for doctor review (HU3)",
             "/case/{prediagnostico_id}": "GET - Get case details for doctor review",
             "/health": "GET - Service health check",
             "/info": "GET - Service information"
