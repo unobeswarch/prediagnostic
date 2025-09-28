@@ -2,9 +2,15 @@
 API routes for prediagnostic case retrieval (HU: Doctor case review).
 """
 from fastapi import APIRouter, HTTPException, status
+from fastapi import File, UploadFile, Form
 from fastapi.responses import JSONResponse
+import shutil
 import logging
 from typing import Dict, Any
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, Any
+import uuid
 
 from ..services.prediagnostic_service import prediagnostic_service
 
@@ -12,6 +18,9 @@ logger = logging.getLogger(__name__)
 
 # Create router
 router = APIRouter()
+
+STORAGE_DIR = Path("storage/radiografias")
+STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @router.get("/case/{prediagnostico_id}", response_model=Dict[str, Any])
@@ -111,3 +120,36 @@ async def service_info():
         },
         "integration": "Designed for BusinessLogic orchestration"
     }
+
+@router.post("/process") 
+async def process_image(imagen: UploadFile = File(...), user_id: str = Form(...)):
+
+    prediagnostico_id = str(uuid.uuid4())
+    nombre_imagen = f"RAD-{str(uuid.uuid4())}.jpg"
+    ruta = STORAGE_DIR / nombre_imagen
+
+    with open(ruta, "wb") as w:
+        shutil.copyfileobj(imagen.file, w)
+
+    entrada = {
+        "user_id": user_id,
+        "prediagnostico_id": prediagnostico_id,
+        "radiografia_ruta": str(ruta),
+        "resultado_modelo": {
+            "probabilidad_neumonia": 0,
+            "etiqueta": ""
+        },
+        "estado": "pendiente",
+        "fecha_procesamiento": 0,
+        "fecha_subida": datetime.utcnow()
+    }
+
+    saved_case = await prediagnostic_service.create_prediagnostico(entrada)
+
+    await prediagnostic_service.process_image_ai(entrada)
+
+    return {
+        "message": "Prediagnóstico creado correctamente",
+        "prediagnostico": saved_case
+    }
+    
