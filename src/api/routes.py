@@ -1,19 +1,29 @@
 """
 API routes for prediagnostic case retrieval (HU: Doctor case review).
 """
-from fastapi import APIRouter, HTTPException, status, File, UploadFile, Form
-from fastapi.encoders import jsonable_encoder
+from fastapi import APIRouter, HTTPException, status, File, UploadFile, Form, Body
 from fastapi.responses import JSONResponse
 import shutil
 import logging
 from typing import Dict, Any
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any
 import uuid
+from pydantic import BaseModel, Field
+import random
+import string
+
 
 from ..services.prediagnostic_service import prediagnostic_service
+from ..services.diagnostic_service import diagnostic_service
 
+# Pydantic model for diagnostic request
+class DiagnosticRequest(BaseModel):
+    """Request model for doctor diagnostic submission"""
+    aprobacion: bool = Field(..., description="Doctor's approval of AI prediction (True/False)")
+    comentario: str = Field(..., min_length=10, description="Doctor's medical comments (minimum 10 characters)")
+
+# Logger setup
 logger = logging.getLogger(__name__)
 
 # Create router
@@ -22,6 +32,91 @@ router = APIRouter()
 STORAGE_DIR = Path("storage/radiografias")
 STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 
+@router.post("/diagnostic/{prediagnostic_id}", response_model=Dict[str, Any])
+async def save_diagnostic(prediagnostic_id: str, diagnostic: DiagnosticRequest = Body(...)):
+    """
+    Save a doctor's diagnostic review for a prediagnostic case (HU5).
+    
+    This endpoint allows a doctor to approve/reject the AI model prediction
+    and provide medical comments for a specific prediagnostic case.
+    
+    Args:
+        prediagnostic_id (str): The ID of the prediagnostic case to review
+        diagnostic (DiagnosticRequest): Request body containing doctor's decision and comments
+    
+    Returns:
+        JSONResponse: Created diagnostic record with ID, approval, comments, and timestamp
+        
+    Raises:
+        HTTPException 404: If prediagnostic case not found
+        HTTPException 500: If internal server error occurs
+    """
+    try:
+        logger.info(f"Processing diagnostic submission for prediagnostic_id: {prediagnostic_id}")
+        
+        # Step 1: Verify that the prediagnostic case exists and is in "procesado" state
+        prediagnostic_case = await prediagnostic_service.get_prediagnostico(prediagnostic_id)
+        if not prediagnostic_case:
+            logger.warning(f"Prediagnostic case not found: {prediagnostic_id}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Prediagnostic case with id '{prediagnostic_id}' not found"
+            )
+        
+        # Step 2: Verify case is in correct state for diagnostic review
+        current_state = prediagnostic_case.get("estado", "")
+        if current_state != "procesado":
+            logger.warning(f"Invalid case state for diagnostic: {current_state}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Case must be in 'procesado' state for diagnostic review. Current state: '{current_state}'"
+            )
+
+        # Step 3: Generate unique diagnostic ID
+        random_suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+        diagnostic_id = f"D{datetime.now().strftime('%Y%m%d%H%M%S')}_{random_suffix}"
+        
+        # Step 4: Create diagnostic document according to HU5 specifications
+        diagnostic_document = {
+            "_id": diagnostic_id,
+            "prediagnostico_id": prediagnostic_id,  # Using Spanish naming as per requirements
+            "aprobacion": diagnostic.aprobacion,     # Boolean: True for approval, False for rejection
+            "comentarios": diagnostic.comentario,    # Doctor's medical comments
+            "fecha_revision": datetime.now().isoformat()  # ISO timestamp of review
+        }
+        
+        logger.info(f"Creating diagnostic document: {diagnostic_id}")
+
+        # Step 5: Save diagnostic to MongoDB diagnosticos collection
+        await diagnostic_service.save_diagnostic(diagnostic_document)
+        
+        # Step 6: Update prediagnostic case status from "procesado" to "Validado"
+        await prediagnostic_service.update_prediagnostic_status(prediagnostic_id, "Validado")
+        
+        logger.info(f"Successfully saved diagnostic {diagnostic_id} and updated case status to Validado")
+
+        # Step 7: Return success response to BusinessLogic
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "_id": diagnostic_id,
+                "prediagnostico_id": prediagnostic_id,
+                "aprobacion": diagnostic.aprobacion,
+                "comentarios": diagnostic.comentario,
+                "fecha_revision": diagnostic_document["fecha_revision"],
+                "message": "Diagnostic saved successfully"
+            }
+        )
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions (404, 400, etc.)
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error saving diagnostic for {prediagnostic_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error while saving diagnostic"
+        )
 
 @router.get("/case/{prediagnostico_id}", response_model=Dict[str, Any])
 async def get_case(prediagnostico_id: str):
