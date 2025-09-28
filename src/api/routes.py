@@ -1,8 +1,8 @@
 """
 API routes for prediagnostic case retrieval (HU: Doctor case review).
 """
-from fastapi import APIRouter, HTTPException, status
-from fastapi import File, UploadFile, Form
+from fastapi import APIRouter, HTTPException, status, File, UploadFile, Form
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 import shutil
 import logging
@@ -128,8 +128,14 @@ async def process_image(imagen: UploadFile = File(...), user_id: str = Form(...)
     nombre_imagen = f"RAD-{str(uuid.uuid4())}.jpg"
     ruta = STORAGE_DIR / nombre_imagen
 
-    with open(ruta, "wb") as w:
-        shutil.copyfileobj(imagen.file, w)
+    try:
+        with open(ruta, "wb") as w:
+            shutil.copyfileobj(imagen.file, w)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail= f"No fue posible guardar la imagen"
+        )
 
     entrada = {
         "user_id": user_id,
@@ -141,15 +147,27 @@ async def process_image(imagen: UploadFile = File(...), user_id: str = Form(...)
         },
         "estado": "pendiente",
         "fecha_procesamiento": 0,
-        "fecha_subida": datetime.utcnow()
+        "fecha_subida": str(datetime.utcnow())
     }
 
-    saved_case = await prediagnostic_service.create_prediagnostico(entrada)
+    try:
+        await prediagnostic_service.create_prediagnostico(entrada)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail= f"Ocurrio un problema durante el guardado del prediagnostico"
+        )
 
-    await prediagnostic_service.process_image_ai(entrada)
+    try:
+        await prediagnostic_service.process_image_ai(entrada)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail= f"Ocurrio un problema durante el guardado del prediagnostico"
+        )
 
     return {
-        "message": "Prediagnóstico creado correctamente",
-        "prediagnostico": saved_case
+        "ruta_prediagnostico": entrada["radiografia_ruta"],
+        "prediagnostico_id": entrada["prediagnostico_id"]
     }
     

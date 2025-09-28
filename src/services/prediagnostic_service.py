@@ -54,7 +54,7 @@ class PrediagnosticService:
         Create and save a new prediagnostico in MongoDB.
         """
 
-        result = await mongo_manager.prediagnosticos_collection.insert_one(datos)
+        await mongo_manager.prediagnosticos_collection.insert_one(datos)
 
     async def process_image_ai(self, datos: Dict[str, Any]):
         """
