@@ -45,6 +45,38 @@ class PrediagnosticService:
             logger.error(f"Error retrieving prediagnostico {prediagnostico_id}: {e}")
             raise
 
+    async def get_diagnostic_by_case_id(self, case_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get diagnostic information by case ID for HU7 (Patient radiograph detail view).
+        
+        This method retrieves medical diagnostic information for cases that have been
+        reviewed by doctors. Used in HU7 to show doctor's validation of AI results.
+        
+        Args:
+            case_id: Case/prediagnostico ID to get diagnostic information for
+            
+        Returns:
+            dict: Diagnostic data with doctor approval, comments, review date, or None if not found
+        """
+        try:
+            result = await mongo_manager.diagnosticos_collection.find_one(
+                {"case_id": case_id}
+            )
+            
+            if result:
+                # Convert ObjectId to string if present
+                if "_id" in result:
+                    result["_id"] = str(result["_id"])
+                logger.info(f"Retrieved diagnostic for case: {case_id}")
+                return result
+            
+            logger.debug(f"Diagnostic not found for case: {case_id} (normal for unreviewed cases)")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error retrieving diagnostic for case {case_id}: {e}")
+            raise
+
 
 # Global prediagnostic service instance
 prediagnostic_service = PrediagnosticService()
