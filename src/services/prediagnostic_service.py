@@ -4,11 +4,12 @@ Prediction service with MongoDB operations for HU: Get case by prediagnostico_id
 import logging
 from typing import Optional, Dict, Any
 from datetime import datetime
-
+from pathlib import Path
+from PIL import Image
+from ..inference.predictor import PneumoniaPredictor
 from ..database.mongodb import mongo_manager
 
 logger = logging.getLogger(__name__)
-
 
 class PrediagnosticService:
     """Service for handling prediagnosticos CRUD operations."""
@@ -45,7 +46,40 @@ class PrediagnosticService:
         except Exception as e:
             logger.error(f"Error retrieving prediagnostico {prediagnostico_id}: {e}")
             raise
+        
 
+
+    async def create_prediagnostico(self, datos: Dict[str, Any]):
+        """
+        Create and save a new prediagnostico in MongoDB.
+        """
+
+        await mongo_manager.prediagnosticos_collection.insert_one(datos)
+
+    async def process_image_ai(self, datos: Dict[str, Any]):
+        """
+        Process the image by using the ai model
+        """
+
+        ruta_imagen = Path(datos["radiografia_ruta"])
+        img = Image.open(ruta_imagen).convert("RGB")
+        predictor_ia = PneumoniaPredictor()
+
+        resultado = predictor_ia.predict_from_image(img)
+
+        datos_actualizados = {
+            "resultado_modelo": {
+                "probabilidad_neumonia": resultado["confidence"],
+                "etiqueta": resultado["predicted_class"],
+            },
+            "estado": "procesado",
+            "fecha_procesamiento": datetime.utcnow(),
+        }
+
+        await mongo_manager.prediagnosticos_collection.update_one(
+            {"prediagnostico_id": datos["prediagnostico_id"]},
+            {"$set": datos_actualizados}
+        )
 
 
     async def update_prediagnostic_status(self, prediagnostico_id: str, new_status: str) -> bool:
