@@ -165,6 +165,56 @@ async def get_case(prediagnostico_id: str):
             detail="Internal server error while retrieving case"
         )
 
+
+@router.get("/diagnostic/{case_id}", response_model=Dict[str, Any])
+async def get_diagnostic(case_id: str):
+    """
+    Get diagnostic details for a specific case (HU7 - Patient radiograph detail view).
+    
+    This endpoint retrieves medical diagnostic information for cases that have been
+    reviewed by doctors. Only validated cases will have diagnostic information.
+    
+    Args:
+        case_id: The ID of the case to get diagnostic information for
+        
+    Returns:
+        dict: Diagnostic details including doctor approval, comments, and review date
+        
+    Raises:
+        404: If no diagnostic information exists for the case (normal for unreviewed cases)
+        500: Internal server error
+    """
+    try:
+        # Get diagnostic from MongoDB using prediagnostico_service
+        diagnostic = await prediagnostic_service.get_diagnostic_by_case_id(case_id)
+        
+        if not diagnostic:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Diagnostic not found for case '{case_id}'"
+            )
+        
+        logger.info(f"Retrieved diagnostic for case {case_id}")
+        
+        # Convert datetime objects to strings for JSON serialization
+        if "fecha_revision" in diagnostic and diagnostic["fecha_revision"]:
+            diagnostic["fecha_revision"] = diagnostic["fecha_revision"].isoformat()
+            
+        return JSONResponse(
+            content=diagnostic,
+            status_code=status.HTTP_200_OK
+        )
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except Exception as e:
+        logger.error(f"Error retrieving diagnostic for case {case_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error while retrieving diagnostic"
+        )
+
 @router.get("/cases", response_model=List[Dict[str, Any]])
 async def get_processed_cases():
     """
@@ -252,15 +302,15 @@ async def service_info():
     return {
         "service_name": "Prediagnostic Case Service", 
         "version": "1.0.0",
-        "description": "Service to retrieve prediagnostic cases for doctor review",
-        "hu_implementation": "Doctor case selection by prediagnostico_id",
+        "description": "Service to retrieve prediagnostic cases and diagnostics for patient/doctor review",
+        "hu_implementation": "Patient radiograph detail view + Doctor case selection",
         "endpoints": {
             "/cases": "GET - Get all processed cases for doctor review (HU3)",
             "/case/{prediagnostico_id}": "GET - Get case details for doctor review",
             "/health": "GET - Service health check",
             "/info": "GET - Service information"
         },
-        "integration": "Designed for BusinessLogic orchestration"
+        "integration": "Designed for BusinessLogic orchestration via REST → GraphQL"
     }
 
 @router.post("/process") 
