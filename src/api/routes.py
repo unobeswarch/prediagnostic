@@ -15,7 +15,6 @@ import string
 
 
 from ..services.prediagnostic_service import prediagnostic_service
-from ..services.prediagnostic_cases_service import prediagnostic_cases_service
 from ..services.diagnostic_service import diagnostic_service
 
 # Pydantic model for diagnostic request
@@ -23,7 +22,6 @@ class DiagnosticRequest(BaseModel):
     """Request model for doctor diagnostic submission"""
     aprobacion: bool = Field(..., description="Doctor's approval of AI prediction (True/False)")
     comentario: str = Field(..., min_length=10, description="Doctor's medical comments (minimum 10 characters)")
-
 
 # Logger setup
 logger = logging.getLogger(__name__)
@@ -312,7 +310,7 @@ async def service_info():
             "/health": "GET - Service health check",
             "/info": "GET - Service information"
         },
-        "integration": "Designed for BusinessLogic orchestration"
+        "integration": "Designed for BusinessLogic orchestration via REST → GraphQL"
     }
 
 
@@ -381,3 +379,4 @@ async def process_image(imagen: UploadFile = File(...), user_id: str = Form(...)
         "ruta_prediagnostico": entrada["radiografia_ruta"],
         "prediagnostico_id": entrada["prediagnostico_id"]
     }
+    
