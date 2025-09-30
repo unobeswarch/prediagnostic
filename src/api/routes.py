@@ -332,9 +332,6 @@ async def get_cases_by_user(user_id: str):
             detail="Internal server error while retrieving cases"
         )
 
-        "integration": "Designed for BusinessLogic orchestration via REST → GraphQL"
-    }
-
 @router.post("/process") 
 async def process_image(imagen: UploadFile = File(...), user_id: str = Form(...)):
 
