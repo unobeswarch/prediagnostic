@@ -313,6 +313,23 @@ async def service_info():
         "integration": "Designed for BusinessLogic orchestration via REST → GraphQL"
     }
 
+
+@router.get("/cases/{user_id}", response_model=Dict[str, Any])
+async def get_cases_by_user(user_id: str):
+    """
+    Get all prediagnostic cases for a given user_id.
+    Returns an array of cases with selected fields.
+    """
+    try:
+        cases = await prediagnostic_cases_service.get_cases_by_user(user_id)
+        return JSONResponse(content={"cases": cases}, status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger.error(f"Error retrieving cases for user_id {user_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error while retrieving cases"
+        )
+
 @router.post("/process") 
 async def process_image(imagen: UploadFile = File(...), user_id: str = Form(...)):
 
