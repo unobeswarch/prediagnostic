@@ -32,7 +32,7 @@ class PrediagnosticService:
             result = await mongo_manager.prediagnosticos_collection.find_one(
                 {"prediagnostico_id": prediagnostico_id}
             )
-            
+            print(result)
             if result:
                 # Convert ObjectId to string if present
                 if "_id" in result:
