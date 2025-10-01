@@ -16,6 +16,7 @@ import string
 
 from ..services.prediagnostic_service import prediagnostic_service
 from ..services.diagnostic_service import diagnostic_service
+from ..services.prediagnostic_cases_service import prediagnostic_cases_service
 
 # Pydantic model for diagnostic request
 class DiagnosticRequest(BaseModel):
@@ -379,4 +380,3 @@ async def process_image(imagen: UploadFile = File(...), user_id: str = Form(...)
         "ruta_prediagnostico": entrada["radiografia_ruta"],
         "prediagnostico_id": entrada["prediagnostico_id"]
     }
-    
