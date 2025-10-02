@@ -2,7 +2,7 @@
 API routes for prediagnostic case retrieval (HU: Doctor case review).
 """
 from fastapi import APIRouter, HTTPException, status, File, UploadFile, Form, Body
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 import shutil
 import logging
 from typing import Dict, Any, List
@@ -16,6 +16,7 @@ import string
 
 from ..services.prediagnostic_service import prediagnostic_service
 from ..services.diagnostic_service import diagnostic_service
+from ..services.prediagnostic_cases_service import prediagnostic_cases_service
 
 # Pydantic model for diagnostic request
 class DiagnosticRequest(BaseModel):
@@ -134,6 +135,7 @@ async def get_case(prediagnostico_id: str):
     """
     try:
         # Get prediagnostico from MongoDB
+        print("ENTRA aca")
         case = await prediagnostic_service.get_prediagnostico(prediagnostico_id)
         
         if not case:
@@ -147,9 +149,7 @@ async def get_case(prediagnostico_id: str):
         # Convert datetime objects to strings for JSON serialization
         if "fecha_procesamiento" in case and case["fecha_procesamiento"]:
             case["fecha_procesamiento"] = case["fecha_procesamiento"].isoformat()
-        if "fecha_subida" in case and case["fecha_subida"]:
-            case["fecha_subida"] = case["fecha_subida"].isoformat()
-            
+
         return JSONResponse(
             content=case,
             status_code=status.HTTP_200_OK
@@ -313,6 +313,23 @@ async def service_info():
         "integration": "Designed for BusinessLogic orchestration via REST → GraphQL"
     }
 
+
+@router.get("/cases/{user_id}", response_model=Dict[str, Any])
+async def get_cases_by_user(user_id: str):
+    """
+    Get all prediagnostic cases for a given user_id.
+    Returns an array of cases with selected fields.
+    """
+    try:
+        cases = await prediagnostic_cases_service.get_cases_by_user(user_id)
+        return JSONResponse(content={"cases": cases}, status_code=status.HTTP_200_OK)
+    except Exception as e:
+        logger.error(f"Error retrieving cases for user_id {user_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error while retrieving cases"
+        )
+
 @router.post("/process") 
 async def process_image(imagen: UploadFile = File(...), user_id: str = Form(...)):
 
@@ -362,4 +379,34 @@ async def process_image(imagen: UploadFile = File(...), user_id: str = Form(...)
         "ruta_prediagnostico": entrada["radiografia_ruta"],
         "prediagnostico_id": entrada["prediagnostico_id"]
     }
+
+@router.get("/image/{image_filename}")
+async def get_image(image_filename: str):
+    """
+    Serve radiography images from storage.
     
+    Args:
+        image_filename (str): Name of the image file to serve
+        
+    Returns:
+        FileResponse: The image file
+    """
+    from fastapi.responses import FileResponse
+    import os
+    
+    # Construct the full path to the image
+    image_path = STORAGE_DIR / image_filename
+    
+    # Check if file exists
+    if not image_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Image {image_filename} not found"
+        )
+    
+    # Return the image file
+    return FileResponse(
+        path=str(image_path),
+        media_type="image/jpeg",
+        headers={"Cache-Control": "max-age=3600"}  # Cache for 1 hour
+    )
