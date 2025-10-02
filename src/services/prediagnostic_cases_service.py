@@ -29,7 +29,8 @@ class PrediagnosticCasesService:
                     ),
                     "estado": doc.get("estado", ""),
                     "diagnostico_ia": doc.get("resultado_modelo", {}).get("etiqueta", ""),
-                    "probabilidad": doc.get("resultado_modelo", {}).get("probabilidad_neumonia", None)
+                    "probabilidad": doc.get("resultado_modelo", {}).get("probabilidad_neumonia", None),
+                    "imagen_path": doc.get("radiografia_ruta", "")
                 }
                 cases.append(case)
             logger.info(f"Retrieved {len(cases)} cases for user_id: {user_id}")
