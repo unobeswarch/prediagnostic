@@ -2,7 +2,7 @@
 API routes for prediagnostic case retrieval (HU: Doctor case review).
 """
 from fastapi import APIRouter, HTTPException, status, File, UploadFile, Form, Body
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 import shutil
 import logging
 from typing import Dict, Any, List
@@ -379,3 +379,34 @@ async def process_image(imagen: UploadFile = File(...), user_id: str = Form(...)
         "ruta_prediagnostico": entrada["radiografia_ruta"],
         "prediagnostico_id": entrada["prediagnostico_id"]
     }
+
+@router.get("/image/{image_filename}")
+async def get_image(image_filename: str):
+    """
+    Serve radiography images from storage.
+    
+    Args:
+        image_filename (str): Name of the image file to serve
+        
+    Returns:
+        FileResponse: The image file
+    """
+    from fastapi.responses import FileResponse
+    import os
+    
+    # Construct the full path to the image
+    image_path = STORAGE_DIR / image_filename
+    
+    # Check if file exists
+    if not image_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Image {image_filename} not found"
+        )
+    
+    # Return the image file
+    return FileResponse(
+        path=str(image_path),
+        media_type="image/jpeg",
+        headers={"Cache-Control": "max-age=3600"}  # Cache for 1 hour
+    )
