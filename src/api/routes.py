@@ -135,9 +135,9 @@ async def get_case(prediagnostico_id: str):
     """
     try:
         # Get prediagnostico from MongoDB
-        print("ENTRA aca")
+        print("--------ENTRA ACAAAAA----------")
         case = await prediagnostic_service.get_prediagnostico(prediagnostico_id)
-        
+        print(case)
         if not case:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -149,6 +149,8 @@ async def get_case(prediagnostico_id: str):
         # Convert datetime objects to strings for JSON serialization
         if "fecha_procesamiento" in case and case["fecha_procesamiento"]:
             case["fecha_procesamiento"] = case["fecha_procesamiento"].isoformat()
+        if "fecha_subida" in case and case["fecha_subida"]:
+            case["fecha_subida"] = case["fecha_subida"].isoformat()
 
         return JSONResponse(
             content=case,

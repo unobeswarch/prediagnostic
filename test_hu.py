@@ -30,7 +30,7 @@ async def test_hu_implementation():
         
         # Create test case directly in MongoDB
         test_case = {
-            "user_id": "test_patient_001",
+            "user_id": "1",
             "prediagnostico_id": test_prediagnostico_id,
             "radiografia_url": "https://example.com/xrays/test_123.jpg",
             "resultado_modelo": {
