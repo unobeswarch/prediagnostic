@@ -93,9 +93,9 @@ ENV/
 env.bak/
 venv.bak/
 .venv/
-tf-env
-.tf-env
 tf-env/
+.tf-env/
+tf-env
 
 # Spyder project settings
 .spyderproject
