@@ -148,9 +148,11 @@ async def get_case(prediagnostico_id: str):
         
         # Convert datetime objects to strings for JSON serialization
         if "fecha_procesamiento" in case and case["fecha_procesamiento"]:
-            case["fecha_procesamiento"] = case["fecha_procesamiento"].isoformat()
+            if isinstance(case["fecha_procesamiento"], datetime):
+                case["fecha_procesamiento"] = case["fecha_procesamiento"].isoformat()
         if "fecha_subida" in case and case["fecha_subida"]:
-            case["fecha_subida"] = case["fecha_subida"].isoformat()
+            if isinstance(case["fecha_subida"], datetime):
+                case["fecha_subida"] = case["fecha_subida"].isoformat()
 
         return JSONResponse(
             content=case,
@@ -199,8 +201,6 @@ async def get_diagnostic(case_id: str):
         logger.info(f"Retrieved diagnostic for case {case_id}")
         
         # Convert datetime objects to strings for JSON serialization
-        if "fecha_revision" in diagnostic and diagnostic["fecha_revision"]:
-            diagnostic["fecha_revision"] = diagnostic["fecha_revision"].isoformat()
             
         return JSONResponse(
             content=diagnostic,
@@ -248,7 +248,10 @@ async def get_processed_cases():
         
         # Get processed cases from the service
         processed_cases = await prediagnostic_service.get_processed_cases()
-        
+        print("DATOOOOOOOOOOOOOOOOOOOOS")
+        print(processed_cases)
+        print("DATOOOOOOOOOOOOOOOOOOOOS")
+
         logger.info(f"Successfully retrieved {len(processed_cases)} processed cases")
         
         return JSONResponse(

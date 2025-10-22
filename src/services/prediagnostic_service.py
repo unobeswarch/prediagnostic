@@ -62,9 +62,9 @@ class PrediagnosticService:
         """
         try:
             result = await mongo_manager.diagnosticos_collection.find_one(
-                {"case_id": case_id}
+                {"prediagnostico_id": case_id}
             )
-            
+            print(result)
             if result:
                 # Convert ObjectId to string if present
                 if "_id" in result:
@@ -178,7 +178,7 @@ class PrediagnosticService:
         try:
             # Query MongoDB for cases with estado="procesado"
             cursor = mongo_manager.prediagnosticos_collection.find(
-                {"estado": "procesado"},
+                {},
                 {
                     "prediagnostico_id": 1,
                     "user_id": 1, 
