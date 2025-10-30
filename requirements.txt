@@ -6,11 +6,11 @@ pydantic>=2.10.0
 
 # AI/ML dependencies (for future team integration)
 # Using flexible versions to avoid conflicts
-tensorflow>=2.20.0
+tensorflow==2.17.0
 keras>=3.7.0
 pillow>=11.0.0
 opencv-python>=4.10.0
-numpy>=2.0.0,<3.0.0
+numpy>=1.23.5,<2.0.0
 
 # MongoDB integration (required for your HU)
 pymongo>=4.6.0
